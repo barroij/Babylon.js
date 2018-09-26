@@ -23,7 +23,6 @@
          * Gets the OBB (object bounding box) directions
          */
         public directions: Vector3[] = [Vector3.Zero(), Vector3.Zero(), Vector3.Zero()];
-
         /**
          * Gets the minimum vector in world space
          */
@@ -52,9 +51,10 @@
          * Creates a new bounding box
          * @param min defines the minimum vector (in local space)
          * @param max defines the maximum vector (in local space)
+         * @param worldMatrix defines the new world matrix
          */
-        constructor(min: Vector3, max: Vector3) {
-            this.reConstruct(min, max);
+        constructor(min: Vector3, max: Vector3, worldMatrix?: Matrix) {
+            this.reConstruct(min, max, worldMatrix);
         }
 
         /**
@@ -95,16 +95,21 @@
          * @hidden
          */
         private boudingVectorFromMinMax(array: Vector3[], min: Vector3, max: Vector3): Vector3[] {
-            if (array.length < 8)
-                array.length = 8;
-            array[0].copyFromFloats(min.x, min.y, min.z);
-            array[1].copyFromFloats(max.x, max.y, max.z);
-            array[2].copyFromFloats(max.x, min.y, min.z);
-            array[3].copyFromFloats(min.x, max.y, min.z);
-            array[4].copyFromFloats(min.x, min.y, max.z);
-            array[5].copyFromFloats(max.x, max.y, min.z);
-            array[6].copyFromFloats(min.x, max.y, max.z);
-            array[7].copyFromFloats(max.x, min.y, max.z);
+            if (array.length < 8) {
+                // make sure the array is big enough
+                for (var index = array.length; index < 8; ++index) {
+                    array.push(Vector3.Zero())
+                }
+            }
+            const minX = min.x, minY = min.y, minZ = min.z, maxX = max.x, maxY = max.y, maxZ = max.z;
+            array[0].copyFromFloats(minX, minY, minZ);
+            array[1].copyFromFloats(maxX, maxY, maxZ);
+            array[2].copyFromFloats(maxX, minY, minZ);
+            array[3].copyFromFloats(minX, maxY, minZ);
+            array[4].copyFromFloats(minX, minY, maxZ);
+            array[5].copyFromFloats(maxX, maxY, minZ);
+            array[6].copyFromFloats(minX, maxY, maxZ);
+            array[7].copyFromFloats(maxX, minY, maxZ);
             return array
         }
 
@@ -117,20 +122,18 @@
          * @param worldMatrix defines the new world matrix
          */
         public reConstruct(min: Vector3, max: Vector3, worldMatrix?: Matrix) {
+            this.directions[0].setAll(0);
+            this.directions[1].setAll(0);
+            this.directions[2].setAll(0);
+            this.minimumWorld.setAll(0);
+            this.maximumWorld.setAll(0);
+            this.centerWorld.setAll(0);
+            this.extendSizeWorld.setAll(0);
+
             this.minimum.copyFrom(min);
             this.maximum.copyFrom(max);
-
-            // OBB
-            this.center.copyFrom(this.maximum).addInPlace(this.minimum).scaleInPlace(0.5);
-            this.extendSize.copyFrom(this.maximum).subtractInPlace(this.minimum).scaleInPlace(0.5);
-            for (var index = 0; index < 3; index++) {
-                this.directions[index].copyFromFloats(0,0,0);
-            }
-
-            this.minimumWorld.copyFromFloats(0,0,0);
-            this.maximumWorld.copyFromFloats(0,0,0);
-            this.centerWorld.copyFromFloats(0,0,0);
-            this.extendSizeWorld.copyFromFloats(0,0,0);
+            this.maximum.addToRef(min, this.center).scaleInPlace(0.5);
+            this.maximum.subtractToRef(max, this.extendSize).scaleInPlace(0.5);
 
             this._update(worldMatrix || this._worldMatrix || Matrix.Identity());
         }
@@ -141,13 +144,15 @@
          * @returns the current bounding box
          */
         public scale(factor: number): BoundingBox {
-            const diff = Tmp.Vector3[0].copyFrom(this.maximum).subtractInPlace(this.minimum);
-            let distance = diff.length() * factor;
-            diff.normalize();
-            let newRadius = diff.scaleInPlace(distance * 0.5);
+            const tmpVectors = Tmp.Vector3;
+            const diff = this.maximum.subtractToRef(this.minimum, tmpVectors[0]);
+            const len = diff.length();
+            diff.normalizeFromLength(len);
+            const distance = len * factor;
+            const newRadius = diff.scaleInPlace(distance * 0.5);
 
-            const min = Tmp.Vector3[1].copyFrom(this.center).subtractInPlace(newRadius);
-            const max = Tmp.Vector3[2].copyFrom(this.center).addInPlace(newRadius);
+            const min = this.center.subtractToRef(newRadius, tmpVectors[1]);
+            const max = this.center.addToRef(newRadius, tmpVectors[2]);
 
             this.reConstruct(min, max);
 
@@ -174,28 +179,27 @@
 
         /** @hidden */
         public _update(world: Matrix): void {
-            Vector3.FromFloatsToRef(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE, this.minimumWorld);
-            Vector3.FromFloatsToRef(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE, this.maximumWorld);
+            const minWorld = this.minimumWorld;
+            const maxWorld = this.maximumWorld;
+            const directions = this.directions;
+            
+            minWorld.setAll(Number.MAX_VALUE);
+            maxWorld.setAll(-Number.MAX_VALUE);
 
             const vectors = this.vectorsToRef(Tmp.Vector3);
             const v = Tmp.Vector3[8];
-            for (var index = 0; index < 8; index++) {
+            for (var index = 0; index < 8; ++index) {
                 Vector3.TransformCoordinatesToRef(vectors[index], world, v);
-                this.minimumWorld.minimizeInPlace(v);
-                this.maximumWorld.maximizeInPlace(v);
+                minWorld.minimizeInPlace(v);
+                maxWorld.maximizeInPlace(v);
             }
 
-            // Extend
-            this.maximumWorld.subtractToRef(this.minimumWorld, this.extendSizeWorld);
-            this.extendSizeWorld.scaleInPlace(0.5);
+            maxWorld.subtractToRef(minWorld, this.extendSizeWorld).scaleInPlace(0.5);
+            maxWorld.addToRef(minWorld, this.centerWorld).scaleInPlace(0.5);
 
-            // OBB
-            this.maximumWorld.addToRef(this.minimumWorld, this.centerWorld);
-            this.centerWorld.scaleInPlace(0.5);
-
-            Vector3.FromFloatArrayToRef(world.m, 0, this.directions[0]);
-            Vector3.FromFloatArrayToRef(world.m, 4, this.directions[1]);
-            Vector3.FromFloatArrayToRef(world.m, 8, this.directions[2]);
+            Vector3.FromArrayToRef(world.m, 0, directions[0]);
+            Vector3.FromArrayToRef(world.m, 4, directions[1]);
+            Vector3.FromArrayToRef(world.m, 8, directions[2]);
 
             this._worldMatrix = world;
         }
@@ -224,15 +228,19 @@
          * @returns true if the point is inside the bounding box
          */
         public intersectsPoint(point: Vector3): boolean {
+            const min = this.minimumWorld;
+            const max = this.maximumWorld;
+            const minX = min.x, minY = min.y, minZ = min.z, maxX = max.x, maxY = max.y, maxZ = max.z;
+            const pointX = point.x, pointY = point.y, pointZ = point.z;
             var delta = -Epsilon;
 
-            if (this.maximumWorld.x - point.x < delta || delta > point.x - this.minimumWorld.x)
+            if (maxX - pointX < delta || delta > pointX - minX)
                 return false;
 
-            if (this.maximumWorld.y - point.y < delta || delta > point.y - this.minimumWorld.y)
+            if (maxY - pointY < delta || delta > pointY - minY)
                 return false;
 
-            if (this.maximumWorld.z - point.z < delta || delta > point.z - this.minimumWorld.z)
+            if (maxZ - pointZ < delta || delta > pointZ - minZ)
                 return false;
 
             return true;
@@ -254,13 +262,17 @@
          * @returns true if there is an intersection
          */
         public intersectsMinMax(min: Vector3, max: Vector3): boolean {
-            if (this.maximumWorld.x < min.x || this.minimumWorld.x > max.x)
+            const myMin = this.minimumWorld;
+            const myMax = this.maximumWorld;
+            const myMinX = myMin.x, myMinY = myMin.y, myMinZ = myMin.z, myMaxX = myMax.x, myMaxY = myMax.y, myMaxZ = myMax.z;
+            const minX = min.x, minY = min.y, minZ = min.z, maxX = max.x, maxY = max.y, maxZ = max.z;
+            if (myMaxX < minX || myMinX > maxX) 
                 return false;
 
-            if (this.maximumWorld.y < min.y || this.minimumWorld.y > max.y)
+            if (myMaxY < minY || myMinY > maxY)
                 return false;
 
-            if (this.maximumWorld.z < min.z || this.minimumWorld.z > max.z)
+            if (myMaxZ < minZ || myMinZ > maxZ)
                 return false;
 
             return true;
@@ -275,16 +287,7 @@
          * @returns true if there is an intersection
          */
         public static Intersects(box0: BoundingBox, box1: BoundingBox): boolean {
-            if (box0.maximumWorld.x < box1.minimumWorld.x || box0.minimumWorld.x > box1.maximumWorld.x)
-                return false;
-
-            if (box0.maximumWorld.y < box1.minimumWorld.y || box0.minimumWorld.y > box1.maximumWorld.y)
-                return false;
-
-            if (box0.maximumWorld.z < box1.minimumWorld.z || box0.minimumWorld.z > box1.maximumWorld.z)
-                return false;
-
-            return true;
+            return box0.intersectsMinMax(box1.minimumWorld, box1.maximumWorld)
         }
 
         /**
@@ -308,9 +311,10 @@
          * @return true if there is an inclusion
          */
         public static IsCompletelyInFrustum(boundingVectors: Vector3[], frustumPlanes: Plane[]): boolean {
-            for (var p = 0; p < 6; p++) {
-                for (var i = 0; i < 8; i++) {
-                    if (frustumPlanes[p].dotCoordinate(boundingVectors[i]) < 0) {
+            for (var p = 0; p < 6; ++p) {
+                const frustumPlane = frustumPlanes[p];
+                for (var i = 0; i < 8; ++i) {
+                    if (frustumPlane.dotCoordinate(boundingVectors[i]) < 0) {
                         return false;
                     }
                 }
@@ -325,17 +329,16 @@
          * @return true if there is an intersection 
          */
         public static IsInFrustum(boundingVectors: Vector3[], frustumPlanes: Plane[]): boolean {
-            for (var p = 0; p < 6; p++) {
-                var inCount = 8;
-
-                for (var i = 0; i < 8; i++) {
-                    if (frustumPlanes[p].dotCoordinate(boundingVectors[i]) < 0) {
-                        --inCount;
-                    } else {
+            for (var p = 0; p < 6; ++p) {
+                let canReturnFalse = true;
+                const frustumPlane = frustumPlanes[p];
+                for (var i = 0; i < 8; ++i) {
+                    if (frustumPlane.dotCoordinate(boundingVectors[i]) >= 0) {
+                        canReturnFalse = false;
                         break;
                     }
                 }
-                if (inCount === 0)
+                if (canReturnFalse)
                     return false;
             }
             return true;

@@ -534,10 +534,7 @@
          * @param index defines an optional index in the target array to define where to start storing values
          * @returns the current Color4 object
          */
-        public toArray(array: number[], index?: number): Color4 {
-            if (index === undefined) {
-                index = 0;
-            }
+        public toArray(array: number[], index: number = 0): Color4 {
             array[index] = this.r;
             array[index + 1] = this.g;
             array[index + 2] = this.b;
@@ -1880,7 +1877,10 @@
          * @returns the current updated Vector3  
          */
         public minimizeInPlace(other: Vector3): Vector3 {
-            return this.minimizeInPlaceFromFloats(other.x, other.y, other.z);
+            if (other.x < this.x) this.x = other.x;
+            if (other.y < this.y) this.y = other.y;
+            if (other.z < this.z) this.z = other.z;
+            return this;
         }
 
         /**
@@ -1889,7 +1889,10 @@
          * @returns the current updated Vector3
          */
         public maximizeInPlace(other: Vector3): Vector3 {
-            return this.maximizeInPlaceFromFloats(other.x, other.y, other.z);
+            if (other.x < this.x) this.x = other.x;
+            if (other.y < this.y) this.y = other.y;
+            if (other.z < this.z) this.z = other.z;
+            return this;
         }
 
         /**
@@ -1981,7 +1984,16 @@
          * @returns the current updated Vector3 
          */
         public normalize(): Vector3 {
-            var len = this.length();
+            return this.normalizeFromLength(this.length());
+        }
+
+        /**
+         * Normalize the current Vector3 with the given input length.
+         * Please note that this is an in place operation.
+         * @param len the length of the vector
+         * @returns the current updated Vector3 
+         */
+        public normalizeFromLength(len : number): Vector3 {
             if (len === 0 || len === 1.0)
                 return this;
 
@@ -1991,6 +2003,7 @@
             this.z *= num;
             return this;
         }
+
 
         /**
          * Normalize the current Vector3 to a new vector
@@ -2062,6 +2075,16 @@
          */
         public set(x: number, y: number, z: number): Vector3 {
             return this.copyFromFloats(x, y, z);
+        }
+
+        /**
+         * Copies the given float to the current Vector3 coordinates
+         * @param v defines the x, y and z coordinates of the operand
+         * @returns the current updated Vector3
+         */
+        public setAll(v: number): Vector3 {
+            this.x = this.y = this.z = v;
+            return this;
         }
 
         // Statics
@@ -2241,14 +2264,7 @@
          * @param result defines the Vector3 where to store the result
          */
         public static TransformCoordinatesToRef(vector: Vector3, transformation: Matrix, result: Vector3): void {
-            var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]) + transformation.m[12];
-            var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]) + transformation.m[13];
-            var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]) + transformation.m[14];
-            var w = (vector.x * transformation.m[3]) + (vector.y * transformation.m[7]) + (vector.z * transformation.m[11]) + transformation.m[15];
-
-            result.x = x / w;
-            result.y = y / w;
-            result.z = z / w;
+            return Vector3.TransformCoordinatesFromFloatsToRef(vector.x, vector.y, vector.z, transformation, result)
         }
 
         /**
@@ -2264,11 +2280,11 @@
             var rx = (x * transformation.m[0]) + (y * transformation.m[4]) + (z * transformation.m[8]) + transformation.m[12];
             var ry = (x * transformation.m[1]) + (y * transformation.m[5]) + (z * transformation.m[9]) + transformation.m[13];
             var rz = (x * transformation.m[2]) + (y * transformation.m[6]) + (z * transformation.m[10]) + transformation.m[14];
-            var rw = (x * transformation.m[3]) + (y * transformation.m[7]) + (z * transformation.m[11]) + transformation.m[15];
+            var rw = 1/((x * transformation.m[3]) + (y * transformation.m[7]) + (z * transformation.m[11]) + transformation.m[15]);
 
-            result.x = rx / rw;
-            result.y = ry / rw;
-            result.z = rz / rw;
+            result.x = rx * rw;
+            result.y = ry * rw;
+            result.z = rz * rw;
         }
 
         /**
@@ -2292,12 +2308,7 @@
          * @param result defines the Vector3 where to store the result
          */
         public static TransformNormalToRef(vector: Vector3, transformation: Matrix, result: Vector3): void {
-            var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]);
-            var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
-            var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]);
-            result.x = x;
-            result.y = y;
-            result.z = z;
+            this.TransformNormalFromFloatsToRef(vector.x, vector.y, vector.z, transformation, result);
         }
 
         /**
@@ -3164,6 +3175,16 @@
          */
         public set(x: number, y: number, z: number, w: number): Vector4 {
             return this.copyFromFloats(x, y, z, w);
+        }
+
+                /**
+         * Copies the given float to the current Vector3 coordinates
+         * @param v defines the x, y, z and w coordinates of the operand
+         * @returns the current updated Vector3
+         */
+        public setAll(v: number): Vector4 {
+            this.x = this.y = this.z = this.w = v;
+            return this;
         }
 
         // Statics

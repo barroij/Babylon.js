@@ -35,9 +35,10 @@
          * Creates a new bounding sphere
          * @param min defines the minimum vector (in local space)
          * @param max defines the maximum vector (in local space)
+         * @param worldMatrix defines the new world matrix
          */
-        constructor(min: Vector3, max: Vector3) {
-            this.reConstruct(min, max);
+        constructor(min: Vector3, max: Vector3, worldMatrix?: Matrix) {
+            this.reConstruct(min, max, worldMatrix);
         }
 
         /**
