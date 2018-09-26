@@ -396,7 +396,8 @@
                 tmpRotated.addInPlace(this._pivotBackTranslation).addInPlace(copy.position);
                 positions.push(tmpRotated.x, tmpRotated.y, tmpRotated.z);
                 if (meshUV) {
-                    uvs.push((copy.uvs.z - copy.uvs.x) * meshUV[u] + copy.uvs.x, (copy.uvs.w - copy.uvs.y) * meshUV[u + 1] + copy.uvs.y);
+                    const copyUvs = copy.uvs;
+                    uvs.push((copyUvs.z - copyUvs.x) * meshUV[u] + copyUvs.x, (copyUvs.w - copyUvs.y) * meshUV[u + 1] + copyUvs.y);
                     u += 2;
                 }
 
