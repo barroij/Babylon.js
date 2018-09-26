@@ -75,7 +75,7 @@
 
         /**
          * Gets the 8 vectors representing the bounding box in local space
-         * @param array an array of Vector3
+         * @param array an array of Vector3 whose length is greater than 8
          * @returns array containing the vectors
          */
         public vectorsToRef(array: Vector3[]): Vector3[] {
@@ -84,7 +84,7 @@
 
         /**
          * Gets the 8 vectors representing the bounding box in world space
-         * @param array  an array of Vector3
+         * @param array  an array of Vector3 whose length is greater than 8
          * @returns a new array containing the vectors
          */
         public vectorsWorldToRef(array: Vector3[]): Vector3[] {
@@ -95,12 +95,6 @@
          * @hidden
          */
         private boudingVectorFromMinMax(array: Vector3[], min: Vector3, max: Vector3): Vector3[] {
-            if (array.length < 8) {
-                // make sure the array is big enough
-                for (var index = array.length; index < 8; ++index) {
-                    array.push(Vector3.Zero())
-                }
-            }
             const minX = min.x, minY = min.y, minZ = min.z, maxX = max.x, maxY = max.y, maxZ = max.z;
             array[0].copyFromFloats(minX, minY, minZ);
             array[1].copyFromFloats(maxX, maxY, maxZ);
