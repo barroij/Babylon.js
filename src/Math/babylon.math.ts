@@ -1451,8 +1451,9 @@
          * @param result defines the target vector
          */
         public static TransformToRef(vector: Vector2, transformation: Matrix, result: Vector2) {
-            var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + transformation.m[12];
-            var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + transformation.m[13];
+            const m = transformation.m;
+            var x = (vector.x * m[0]) + (vector.y * m[4]) + m[12];
+            var y = (vector.x * m[1]) + (vector.y * m[5]) + m[13];
             result.x = x;
             result.y = y;
         }
@@ -2277,10 +2278,11 @@
          * @param result defines the Vector3 where to store the result
          */
         public static TransformCoordinatesFromFloatsToRef(x: number, y: number, z: number, transformation: Matrix, result: Vector3): void {
-            var rx = (x * transformation.m[0]) + (y * transformation.m[4]) + (z * transformation.m[8]) + transformation.m[12];
-            var ry = (x * transformation.m[1]) + (y * transformation.m[5]) + (z * transformation.m[9]) + transformation.m[13];
-            var rz = (x * transformation.m[2]) + (y * transformation.m[6]) + (z * transformation.m[10]) + transformation.m[14];
-            var rw = 1/((x * transformation.m[3]) + (y * transformation.m[7]) + (z * transformation.m[11]) + transformation.m[15]);
+            const m = transformation.m;
+            var rx = x * m[0] + y * m[4] + z * m[8] + m[12];
+            var ry = x * m[1] + y * m[5] + z * m[9] + m[13];
+            var rz = x * m[2] + y * m[6] + z * m[10] + m[14];
+            var rw = 1/(x * m[3] + y * m[7] + z * m[11] + m[15]);
 
             result.x = rx * rw;
             result.y = ry * rw;
@@ -2321,9 +2323,10 @@
          * @param result defines the Vector3 where to store the result
          */
         public static TransformNormalFromFloatsToRef(x: number, y: number, z: number, transformation: Matrix, result: Vector3): void {
-            result.x = (x * transformation.m[0]) + (y * transformation.m[4]) + (z * transformation.m[8]);
-            result.y = (x * transformation.m[1]) + (y * transformation.m[5]) + (z * transformation.m[9]);
-            result.z = (x * transformation.m[2]) + (y * transformation.m[6]) + (z * transformation.m[10]);
+            const m = transformation.m;
+            result.x = x * m[0] + y * m[4] + z * m[8];
+            result.y = x * m[1] + y * m[5] + z * m[9];
+            result.z = x * m[2] + y * m[6] + z * m[10];
         }
 
         /**
@@ -3348,9 +3351,10 @@
          * @param result the vector to store the result in
          */
         public static TransformNormalToRef(vector: Vector4, transformation: Matrix, result: Vector4): void {
-            var x = (vector.x * transformation.m[0]) + (vector.y * transformation.m[4]) + (vector.z * transformation.m[8]);
-            var y = (vector.x * transformation.m[1]) + (vector.y * transformation.m[5]) + (vector.z * transformation.m[9]);
-            var z = (vector.x * transformation.m[2]) + (vector.y * transformation.m[6]) + (vector.z * transformation.m[10]);
+            const m = transformation.m;
+            var x = (vector.x * m[0]) + (vector.y * m[4]) + (vector.z * m[8]);
+            var y = (vector.x * m[1]) + (vector.y * m[5]) + (vector.z * m[9]);
+            var z = (vector.x * m[2]) + (vector.y * m[6]) + (vector.z * m[10]);
             result.x = x;
             result.y = y;
             result.z = z;
@@ -3368,9 +3372,10 @@
          * @param result the vector to store the results in
          */
         public static TransformNormalFromFloatsToRef(x: number, y: number, z: number, w: number, transformation: Matrix, result: Vector4): void {
-            result.x = (x * transformation.m[0]) + (y * transformation.m[4]) + (z * transformation.m[8]);
-            result.y = (x * transformation.m[1]) + (y * transformation.m[5]) + (z * transformation.m[9]);
-            result.z = (x * transformation.m[2]) + (y * transformation.m[6]) + (z * transformation.m[10]);
+            const m = transformation.m;
+            result.x = (x * m[0]) + (y * m[4]) + (z * m[8]);
+            result.y = (x * m[1]) + (y * m[5]) + (z * m[9]);
+            result.z = (x * m[2]) + (y * m[6]) + (z * m[10]);
             result.w = w;
         }
     }
