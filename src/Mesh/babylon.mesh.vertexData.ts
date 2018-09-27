@@ -1,4 +1,5 @@
 module BABYLON {
+    const emptyArray:any[] = [];
     /**
      * Define an interface for all classes that will get and set the data on vertices
      */
@@ -1536,32 +1537,48 @@ module BABYLON {
          * @returns the VertexData of the LineSystem
          */
         public static CreateLineSystem(options: { lines: Vector3[][], colors?: Nullable<Color4[][]> }): VertexData {
-            var indices = [];
-            var positions = [];
-            var lines = options.lines;
-            var colors = options.colors;
-            var vertexColors = [];
-            var idx = 0;
+            const vertexData = new VertexData();
 
-            for (var l = 0; l < lines.length; l++) {
-                var points = lines[l];
-                for (var index = 0; index < points.length; index++) {
-                    positions.push(points[index].x, points[index].y, points[index].z);
-                    if (colors) {
-                        var color = colors[l];
-                        vertexColors.push(color[index].r, color[index].g, color[index].b, color[index].a);
-                    }
-                    if (index > 0) {
-                        indices.push(idx - 1);
-                        indices.push(idx);
-                    }
-                    idx++;
+            const indices = [];
+            const positions = [];
+            const vertexColors = [];
+            const lines = options.lines;
+            const colors = options.colors;
+            let idx = 0;
+
+            for (let lineIndex = 0; lineIndex < lines.length; ++lineIndex) {
+                const points = lines[lineIndex];
+                if (points.length <= 1) {
+                    continue;
+                }
+
+                const firstPoint = points[0];
+                positions.push(firstPoint.x, firstPoint.y, firstPoint.z);
+                indices.push(0);
+                for (let index = 1; index < points.length; ++index) {
+                    const point = points[index];
+                    positions.push(point.x, point.y, point.z);
+                    indices.push(idx - 1, idx);
+                    ++idx;
                 }
             }
-            var vertexData = new VertexData();
+
             vertexData.indices = indices;
             vertexData.positions = positions;
+
             if (colors) {
+                for (let lineIndex = 0; lineIndex < lines.length; ++lineIndex) {
+                    const lineColors = colors[lineIndex];
+                    if (lineColors.length <= 1) {
+                        continue;
+                    }
+
+                        for (let index = 0; index < lineColors.length; index++) {
+                            const color = lineColors[index];
+                            vertexColors.push(color.r, color.g, color.b, color.a);
+                        }
+                }
+
                 vertexData.colors = vertexColors;
             }
             return vertexData;
