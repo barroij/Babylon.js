@@ -1,5 +1,4 @@
 module BABYLON {
-    const emptyArray:any[] = [];
     /**
      * Define an interface for all classes that will get and set the data on vertices
      */
@@ -1573,10 +1572,10 @@ module BABYLON {
                         continue;
                     }
 
-                        for (let index = 0; index < lineColors.length; index++) {
-                            const color = lineColors[index];
-                            vertexColors.push(color.r, color.g, color.b, color.a);
-                        }
+                    for (let index = 0; index < lineColors.length; index++) {
+                        const color = lineColors[index];
+                        vertexColors.push(color.r, color.g, color.b, color.a);
+                    }
                 }
 
                 vertexData.colors = vertexColors;
