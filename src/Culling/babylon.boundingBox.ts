@@ -1,4 +1,4 @@
-﻿module BABYLON {
+module BABYLON {
     /**
      * Class used to store bounding box information
      */
@@ -124,7 +124,7 @@
             this.center.copyFrom(this.maximum).addInPlace(this.minimum).scaleInPlace(0.5);
             this.extendSize.copyFrom(this.maximum).subtractInPlace(this.minimum).scaleInPlace(0.5);
             for (var index = 0; index < 3; index++) {
-                this.directions[index].copyFromFloats(0,0,0);
+                this.directions[index].copyFromFloats(0, 0, 0);
             }
 
             this.minimumWorld.copyFromFloats(0,0,0);
@@ -213,7 +213,7 @@
          * Tests if the bounding box is entirely inside the frustum planes
          * @param frustumPlanes defines the frustum planes to test
          * @returns true if there is an inclusion
-         */        
+         */
         public isCompletelyInFrustum(frustumPlanes: Plane[]): boolean {
             return BoundingBox.IsCompletelyInFrustum(this.vectorsWorldToRef(Tmp.Vector3), frustumPlanes);
         }
@@ -226,14 +226,17 @@
         public intersectsPoint(point: Vector3): boolean {
             var delta = -Epsilon;
 
-            if (this.maximumWorld.x - point.x < delta || delta > point.x - this.minimumWorld.x)
+            if (this.maximumWorld.x - point.x < delta || delta > point.x - this.minimumWorld.x) {
                 return false;
+            }
 
-            if (this.maximumWorld.y - point.y < delta || delta > point.y - this.minimumWorld.y)
+            if (this.maximumWorld.y - point.y < delta || delta > point.y - this.minimumWorld.y) {
                 return false;
+            }
 
-            if (this.maximumWorld.z - point.z < delta || delta > point.z - this.minimumWorld.z)
+            if (this.maximumWorld.z - point.z < delta || delta > point.z - this.minimumWorld.z) {
                 return false;
+            }
 
             return true;
         }
@@ -254,14 +257,17 @@
          * @returns true if there is an intersection
          */
         public intersectsMinMax(min: Vector3, max: Vector3): boolean {
-            if (this.maximumWorld.x < min.x || this.minimumWorld.x > max.x)
+            if (this.maximumWorld.x < min.x || this.minimumWorld.x > max.x) {
                 return false;
+            }
 
-            if (this.maximumWorld.y < min.y || this.minimumWorld.y > max.y)
+            if (this.maximumWorld.y < min.y || this.minimumWorld.y > max.y) {
                 return false;
+            }
 
-            if (this.maximumWorld.z < min.z || this.minimumWorld.z > max.z)
+            if (this.maximumWorld.z < min.z || this.minimumWorld.z > max.z) {
                 return false;
+            }
 
             return true;
         }
@@ -275,14 +281,17 @@
          * @returns true if there is an intersection
          */
         public static Intersects(box0: BoundingBox, box1: BoundingBox): boolean {
-            if (box0.maximumWorld.x < box1.minimumWorld.x || box0.minimumWorld.x > box1.maximumWorld.x)
+            if (box0.maximumWorld.x < box1.minimumWorld.x || box0.minimumWorld.x > box1.maximumWorld.x) {
                 return false;
+            }
 
-            if (box0.maximumWorld.y < box1.minimumWorld.y || box0.minimumWorld.y > box1.maximumWorld.y)
+            if (box0.maximumWorld.y < box1.minimumWorld.y || box0.minimumWorld.y > box1.maximumWorld.y) {
                 return false;
+            }
 
-            if (box0.maximumWorld.z < box1.minimumWorld.z || box0.minimumWorld.z > box1.maximumWorld.z)
+            if (box0.maximumWorld.z < box1.minimumWorld.z || box0.minimumWorld.z > box1.maximumWorld.z) {
                 return false;
+            }
 
             return true;
         }
@@ -320,9 +329,9 @@
 
         /**
          * Tests if a bounding box defined with 8 vectors intersects frustum planes
-         * @param boundingVectors defines an array of 8 vectors representing a bounding box 
+         * @param boundingVectors defines an array of 8 vectors representing a bounding box
          * @param frustumPlanes defines the frustum planes to test
-         * @return true if there is an intersection 
+         * @return true if there is an intersection
          */
         public static IsInFrustum(boundingVectors: Vector3[], frustumPlanes: Plane[]): boolean {
             for (var p = 0; p < 6; p++) {
@@ -335,8 +344,9 @@
                         break;
                     }
                 }
-                if (inCount === 0)
+                if (inCount === 0) {
                     return false;
+                }
             }
             return true;
         }

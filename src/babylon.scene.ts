@@ -63,6 +63,15 @@ module BABYLON {
         renderingGroupId: number;
     }
 
+    /** Interface defining initialization parameters for Scene class */
+    export interface SceneOptions {
+        /**
+         * Defines that scene should keep up-to-date a map of geometry to enable fast look-up by Id
+         * It will improve performance when the number of geometries becomes important.
+         */
+        useGeometryIdsMap?: boolean;
+    }
+
     /**
      * Represents a scene to be rendered by the engine.
      * @see http://doc.babylonjs.com/features/scene
@@ -186,18 +195,15 @@ module BABYLON {
          */
         public clipPlane: Nullable<Plane>;
 
-
         /**
          * Gets or sets the active clipplane 2
          */
         public clipPlane2: Nullable<Plane>;
 
-
         /**
          * Gets or sets the active clipplane 3
          */
         public clipPlane3: Nullable<Plane>;
-
 
         /**
          * Gets or sets the active clipplane 4
@@ -632,7 +638,7 @@ module BABYLON {
          */
         public setStepId(newStepId: number): void {
             this._currentStepId = newStepId;
-        };
+        }
 
         /**
          * Gets the step Id used by deterministic lock step
@@ -641,7 +647,7 @@ module BABYLON {
          */
         public getStepId(): number {
             return this._currentStepId;
-        };
+        }
 
         /**
          * Gets the internal step used by deterministic lock step
@@ -650,7 +656,7 @@ module BABYLON {
          */
         public getInternalStep(): number {
             return this._currentInternalStep;
-        };
+        }
 
         // Fog
 
@@ -1168,10 +1174,15 @@ module BABYLON {
         public _pointerUpStage = Stage.Create<PointerUpDownStageAction>();
 
         /**
+         * an optional map from Geometry Id to Geometry index in the 'geometries' array
+         */
+        private geometriesById: Nullable<{ [id: string]: number | undefined }> = null;
+
+        /**
          * Creates a new Scene
          * @param engine defines the engine to use to render this scene
          */
-        constructor(engine: Engine) {
+        constructor(engine: Engine, options?: SceneOptions) {
             super();
             this._engine = engine || Engine.LastCreatedEngine;
 
@@ -1189,7 +1200,7 @@ module BABYLON {
             }
 
             //collision coordinator initialization. For now legacy per default.
-            this.workerCollisions = false;//(!!Worker && (!!BABYLON.CollisionWorker || BABYLON.WorkerIncluded));
+            this.workerCollisions = false; //(!!Worker && (!!BABYLON.CollisionWorker || BABYLON.WorkerIncluded));
 
             // Uniform Buffer
             this._createUbo();
@@ -1200,12 +1211,16 @@ module BABYLON {
             }
 
             this.setDefaultCandidateProviders();
+
+            if (options && options.useGeometryIdsMap === true) {
+                this.geometriesById = {};
+            }
         }
 
         private _defaultMeshCandidates: ISmartArrayLike<AbstractMesh> = {
             data: [],
             length: 0
-        }
+        };
 
         /**
          * @hidden
@@ -1219,7 +1234,7 @@ module BABYLON {
         private _defaultSubMeshCandidates: ISmartArrayLike<SubMesh> = {
             data: [],
             length: 0
-        }
+        };
 
         /**
          * @hidden
@@ -1805,7 +1820,7 @@ module BABYLON {
         /** @hidden */
         public _isPointerSwiping(): boolean {
             return Math.abs(this._startingPointerPosition.x - this._pointerX) > Scene.DragMovementThreshold ||
-                   Math.abs(this._startingPointerPosition.y - this._pointerY) > Scene.DragMovementThreshold;
+                Math.abs(this._startingPointerPosition.y - this._pointerY) > Scene.DragMovementThreshold;
         }
 
         /**
@@ -1836,7 +1851,7 @@ module BABYLON {
                     clickInfo.ignore = false;
                     cb(clickInfo, this._currentPickResult);
                 }
-            }
+            };
 
             this._initClickEvent = (obs1: Observable<PointerInfoPre>, obs2: Observable<PointerInfo>, evt: PointerEvent, cb: (clickInfo: ClickInfo, pickResult: Nullable<PickingInfo>) => void): void => {
                 let clickInfo = new ClickInfo();
@@ -1848,8 +1863,9 @@ module BABYLON {
                     || obs1.hasSpecificMask(PointerEventTypes.POINTERDOUBLETAP) || obs2.hasSpecificMask(PointerEventTypes.POINTERDOUBLETAP);
                 if (!checkPicking && ActionManager && ActionManager.HasPickTriggers) {
                     act = this._initActionManager(act, clickInfo);
-                    if (act)
+                    if (act) {
                         checkPicking = act.hasPickTriggers;
+                    }
                 }
                 if (checkPicking) {
                     let btn = evt.button;
@@ -1864,8 +1880,9 @@ module BABYLON {
 
                             if (checkSingleClickImmediately && !ActionManager.HasSpecificTrigger(ActionManager.OnDoublePickTrigger)) {
                                 act = this._initActionManager(act, clickInfo);
-                                if (act)
+                                if (act) {
                                     checkSingleClickImmediately = !act.hasSpecificTrigger(ActionManager.OnDoublePickTrigger);
+                                }
                             }
                         }
 
@@ -1889,8 +1906,9 @@ module BABYLON {
                             obs2.hasSpecificMask(PointerEventTypes.POINTERDOUBLETAP);
                         if (!checkDoubleClick && ActionManager.HasSpecificTrigger(ActionManager.OnDoublePickTrigger)) {
                             act = this._initActionManager(act, clickInfo);
-                            if (act)
+                            if (act) {
                                 checkDoubleClick = act.hasSpecificTrigger(ActionManager.OnDoublePickTrigger);
+                            }
                         }
                         if (checkDoubleClick) {
                             // two successive keys pressed are equal, double click delay is not over and double click has not just occurred
@@ -2197,20 +2215,8 @@ module BABYLON {
                 return false;
             }
 
-            if (this._pendingData.length > 0) {
-                return false;
-            }
             let index: number;
             let engine = this.getEngine();
-
-            // Geometries
-            for (index = 0; index < this.geometries.length; index++) {
-                var geometry = this.geometries[index];
-
-                if (geometry.delayLoadState === Engine.DELAYLOADSTATE_LOADING) {
-                    return false;
-                }
-            }
 
             // Meshes
             for (index = 0; index < this.meshes.length; index++) {
@@ -2234,6 +2240,20 @@ module BABYLON {
                     if (!step.action(mesh, hardwareInstancedRendering)) {
                         return false;
                     }
+                }
+            }
+
+            // Pending data
+            if (this._pendingData.length > 0) {
+                return false;
+            }
+
+            // Geometries
+            for (index = 0; index < this.geometries.length; index++) {
+                var geometry = this.geometries[index];
+
+                if (geometry.delayLoadState === Engine.DELAYLOADSTATE_LOADING) {
+                    return false;
                 }
             }
 
@@ -2305,7 +2325,7 @@ module BABYLON {
                 setTimeout(() => {
                     this.unregisterBeforeRender(execFunc);
                 });
-            }
+            };
             this.registerBeforeRender(execFunc);
         }
 
@@ -2381,7 +2401,7 @@ module BABYLON {
          * @returns A promise that resolves when the scene is ready
          */
         public whenReadyAsync(): Promise<void> {
-            return new Promise(resolve => {
+            return new Promise((resolve) => {
                 this.executeWhenReady(() => {
                     resolve();
                 });
@@ -2624,7 +2644,7 @@ module BABYLON {
                     totalWeight: 0,
                     animations: [],
                     originalValue: originalValue
-                }
+                };
             }
 
             target._lateAnimationHolders[runtimeAnimation.targetPath].animations.push(runtimeAnimation);
@@ -2943,7 +2963,7 @@ module BABYLON {
             if (recursive) {
                 newMesh.getChildMeshes().forEach((m) => {
                     this.addMesh(m);
-                })
+                });
             }
         }
 
@@ -2964,7 +2984,7 @@ module BABYLON {
             if (recursive) {
                 toRemove.getChildMeshes().forEach((m) => {
                     this.removeMesh(m);
-                })
+                });
             }
             return index;
         }
@@ -3075,7 +3095,6 @@ module BABYLON {
             this.onCameraRemovedObservable.notifyObservers(toRemove);
             return index;
         }
-
 
         /**
          * Remove a particle system for the list of scene's particle systems
@@ -3271,6 +3290,10 @@ module BABYLON {
          * @param newGeometry The geometry to add
          */
         public addGeometry(newGeometry: Geometry): void {
+            if (this.geometriesById) {
+                this.geometriesById[newGeometry.id] = this.geometries.length;
+            }
+
             this.geometries.push(newGeometry);
         }
 
@@ -3515,7 +3538,6 @@ module BABYLON {
             return null;
         }
 
-
         /**
          * Gets a particle system by id
          * @param id defines the particle system id
@@ -3537,9 +3559,17 @@ module BABYLON {
          * @return the geometry or null if none found.
          */
         public getGeometryByID(id: string): Nullable<Geometry> {
-            for (var index = 0; index < this.geometries.length; index++) {
-                if (this.geometries[index].id === id) {
+            if (this.geometriesById) {
+                const index = this.geometriesById[id];
+                if (index !== undefined) {
                     return this.geometries[index];
+                }
+            }
+            else {
+                for (var index = 0; index < this.geometries.length; index++) {
+                    if (this.geometries[index].id === id) {
+                        return this.geometries[index];
+                    }
                 }
             }
 
@@ -3557,7 +3587,7 @@ module BABYLON {
                 return false;
             }
 
-            this.geometries.push(geometry);
+            this.addGeometry(geometry);
 
             //notify the collision coordinator
             if (this.collisionCoordinator) {
@@ -3575,20 +3605,38 @@ module BABYLON {
          * @return a boolean defining if the geometry was removed or not
          */
         public removeGeometry(geometry: Geometry): boolean {
-            var index = this.geometries.indexOf(geometry);
-
-            if (index > -1) {
-                this.geometries.splice(index, 1);
-
-                //notify the collision coordinator
-                if (this.collisionCoordinator) {
-                    this.collisionCoordinator.onGeometryDeleted(geometry);
+            let index;
+            if (this.geometriesById) {
+                index = this.geometriesById[geometry.id];
+                if (index === undefined) {
+                    return false;
                 }
-
-                this.onGeometryRemovedObservable.notifyObservers(geometry);
-                return true;
             }
-            return false;
+            else {
+                index = this.geometries.indexOf(geometry);
+                if (index < 0) {
+                    return false;
+                }
+            }
+
+            if (index !== this.geometries.length - 1) {
+                const lastGeometry = this.geometries[this.geometries.length - 1];
+                this.geometries[index] = lastGeometry;
+                if (this.geometriesById) {
+                    this.geometriesById[lastGeometry.id] = index;
+                    this.geometriesById[geometry.id] = undefined;
+                }
+            }
+
+            this.geometries.pop();
+
+            //notify the collision coordinator
+            if (this.collisionCoordinator) {
+                this.collisionCoordinator.onGeometryDeleted(geometry);
+            }
+
+            this.onGeometryRemovedObservable.notifyObservers(geometry);
+            return true;
         }
 
         /**
@@ -3620,9 +3668,9 @@ module BABYLON {
          * @returns a list of meshes
          */
         public getMeshesByID(id: string): Array<AbstractMesh> {
-            return this.meshes.filter(function (m) {
+            return this.meshes.filter(function(m) {
                 return m.id === id;
-            })
+            });
         }
 
         /**
@@ -3646,9 +3694,9 @@ module BABYLON {
          * @returns a list of transform nodes
          */
         public getTransformNodesByID(id: string): Array<TransformNode> {
-            return this.transformNodes.filter(function (m) {
+            return this.transformNodes.filter(function(m) {
                 return m.id === id;
-            })
+            });
         }
 
         /**
@@ -3999,7 +4047,7 @@ module BABYLON {
 
         /** @hidden */
         public _isInIntermediateRendering(): boolean {
-            return this._intermediateRendering
+            return this._intermediateRendering;
         }
 
         /**
@@ -4198,8 +4246,9 @@ module BABYLON {
 
             this.activeCamera = camera;
 
-            if (!this.activeCamera)
+            if (!this.activeCamera) {
                 throw new Error("Active camera not set");
+            }
 
             // Viewport
             engine.setViewport(this.activeCamera.viewport);
@@ -4353,7 +4402,7 @@ module BABYLON {
                             }
 
                             //if this is an exit trigger, or no exit trigger exists, remove the id from the intersection in progress array.
-                            if (!sourceMesh.actionManager.hasSpecificTrigger(ActionManager.OnIntersectionExitTrigger, parameter => {
+                            if (!sourceMesh.actionManager.hasSpecificTrigger(ActionManager.OnIntersectionExitTrigger, (parameter) => {
                                 var parameterMesh = parameter instanceof AbstractMesh ? parameter : parameter.mesh;
                                 return otherMesh === parameterMesh;
                             }) || action.trigger === ActionManager.OnIntersectionExitTrigger) {
@@ -4498,8 +4547,9 @@ module BABYLON {
 
                         this.activeCamera = renderTarget.activeCamera || this.activeCamera;
 
-                        if (!this.activeCamera)
+                        if (!this.activeCamera) {
                             throw new Error("Active camera not set");
+                        }
 
                         // Viewport
                         engine.setViewport(this.activeCamera.viewport);
@@ -4752,7 +4802,7 @@ module BABYLON {
 
             // Release materials
             if (this.defaultMaterial) {
-                this.defaultMaterial.dispose()
+                this.defaultMaterial.dispose();
             }
             while (this.multiMaterials.length) {
                 this.multiMaterials[0].dispose();
@@ -4850,7 +4900,7 @@ module BABYLON {
             var min = new Vector3(Number.MAX_VALUE, Number.MAX_VALUE, Number.MAX_VALUE);
             var max = new Vector3(-Number.MAX_VALUE, -Number.MAX_VALUE, -Number.MAX_VALUE);
             filterPredicate = filterPredicate || (() => true);
-            this.meshes.filter(filterPredicate).forEach(mesh => {
+            this.meshes.filter(filterPredicate).forEach((mesh) => {
                 mesh.computeWorldMatrix(true);
 
                 if (!mesh.subMeshes || mesh.subMeshes.length === 0 || mesh.infiniteDistance) {
@@ -4864,7 +4914,7 @@ module BABYLON {
 
                 Tools.CheckExtends(minBox, min, max);
                 Tools.CheckExtends(maxBox, min, max);
-            })
+            });
 
             return {
                 min: min,
@@ -4905,8 +4955,9 @@ module BABYLON {
             var engine = this._engine;
 
             if (!camera) {
-                if (!this.activeCamera)
+                if (!this.activeCamera) {
                     throw new Error("Active camera not set");
+                }
 
                 camera = this.activeCamera;
             }
@@ -4953,8 +5004,9 @@ module BABYLON {
             var engine = this._engine;
 
             if (!camera) {
-                if (!this.activeCamera)
+                if (!this.activeCamera) {
                     throw new Error("Active camera not set");
+                }
 
                 camera = this.activeCamera;
             }
@@ -4992,11 +5044,13 @@ module BABYLON {
                 var ray = rayFunction(world);
 
                 var result = mesh.intersects(ray, fastCheck);
-                if (!result || !result.hit)
+                if (!result || !result.hit) {
                     continue;
+                }
 
-                if (!fastCheck && pickingInfo != null && result.distance >= pickingInfo.distance)
+                if (!fastCheck && pickingInfo != null && result.distance >= pickingInfo.distance) {
                     continue;
+                }
 
                 pickingInfo = result;
 
@@ -5029,8 +5083,9 @@ module BABYLON {
                 var ray = rayFunction(world);
 
                 var result = mesh.intersects(ray, false);
-                if (!result || !result.hit)
+                if (!result || !result.hit) {
                     continue;
+                }
 
                 pickingInfos.push(result);
             }
@@ -5052,7 +5107,7 @@ module BABYLON {
             if (!PickingInfo) {
                 return null;
             }
-            var result = this._internalPick(world => {
+            var result = this._internalPick((world) => {
                 this.createPickingRayToRef(x, y, world, this._tempPickingRay!, camera || null);
                 return this._tempPickingRay!;
             }, predicate, fastCheck);
@@ -5071,7 +5126,7 @@ module BABYLON {
          * @returns a PickingInfo
          */
         public pickWithRay(ray: Ray, predicate?: (mesh: AbstractMesh) => boolean, fastCheck?: boolean): Nullable<PickingInfo> {
-            var result = this._internalPick(world => {
+            var result = this._internalPick((world) => {
                 if (!this._pickWithRayInverseMatrix) {
                     this._pickWithRayInverseMatrix = Matrix.Identity();
                 }
@@ -5099,7 +5154,7 @@ module BABYLON {
          * @returns an array of PickingInfo
          */
         public multiPick(x: number, y: number, predicate?: (mesh: AbstractMesh) => boolean, camera?: Camera): Nullable<PickingInfo[]> {
-            return this._internalMultiPick(world => this.createPickingRay(x, y, world, camera || null), predicate);
+            return this._internalMultiPick((world) => this.createPickingRay(x, y, world, camera || null), predicate);
         }
 
         /**
@@ -5109,7 +5164,7 @@ module BABYLON {
          * @returns an array of PickingInfo
          */
         public multiPickWithRay(ray: Ray, predicate: (mesh: AbstractMesh) => boolean): Nullable<PickingInfo[]> {
-            return this._internalMultiPick(world => {
+            return this._internalMultiPick((world) => {
                 if (!this._pickWithRayInverseMatrix) {
                     this._pickWithRayInverseMatrix = Matrix.Identity();
                 }
@@ -5331,7 +5386,7 @@ module BABYLON {
         public _loadFile(url: string, onSuccess: (data: string | ArrayBuffer, responseURL?: string) => void, onProgress?: (data: any) => void, useDatabase?: boolean, useArrayBuffer?: boolean, onError?: (request?: XMLHttpRequest, exception?: any) => void): IFileRequest {
             let request = Tools.LoadFile(url, onSuccess, onProgress, useDatabase ? this.database : undefined, useArrayBuffer, onError);
             this._activeRequests.push(request);
-            request.onCompleteObservable.add(request => {
+            request.onCompleteObservable.add((request) => {
                 this._activeRequests.splice(this._activeRequests.indexOf(request), 1);
             });
             return request;
@@ -5344,7 +5399,7 @@ module BABYLON {
                     resolve(data);
                 }, undefined, useDatabase, useArrayBuffer, (request, exception) => {
                     reject(exception);
-                })
+                });
             });
         }
     }
