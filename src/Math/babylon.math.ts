@@ -4640,9 +4640,9 @@ module BABYLON {
                 return false;
             }
 
-            // if (!this._isIdentityDirty && !(value as Matrix)._isIdentityDirty) {
-            //     return this._isIdentity === (value as Matrix)._isIdentity;
-            // }
+            if (!this._isIdentityDirty && !(value as Matrix)._isIdentityDirty) {
+                return this._isIdentity === (value as Matrix)._isIdentity;
+            }
 
             const m = this.m;
             const om = value && value.m;
