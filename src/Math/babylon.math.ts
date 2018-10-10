@@ -1364,9 +1364,9 @@ module BABYLON {
         public static Hermite(value1: DeepImmutable<Vector2>, tangent1: DeepImmutable<Vector2>, value2: DeepImmutable<Vector2>, tangent2: DeepImmutable<Vector2>, amount: number): Vector2 {
             var squared = amount * amount;
             var cubed = amount * squared;
-            var part1 = ((2 * cubed) - (3 * squared)) + 1;
-            var part2 = (-2 * cubed) + (3 * squared);
-            var part3 = (cubed - (2 * squared)) + amount;
+            var part1 = (2 * cubed - 3 * squared) + 1;
+            var part2 = -2 * cubed + 3 * squared;
+            var part3 = (cubed - 2 * squared) + amount;
             var part4 = cubed - squared;
 
             var x = value1.x * part1 + value2.x * part2 + tangent1.x * part3 + tangent2.x * part4;
@@ -4303,7 +4303,7 @@ module BABYLON {
          * @returns the matrix determinant
          */
         public determinant(): number {
-            if (this.isIdentity) {
+            if (this._isIdentity) {
                 return 1;
             }
 
@@ -4405,7 +4405,7 @@ module BABYLON {
          * @returns the unmodified current matrix
          */
         public invertToRef(result: Matrix): Matrix {
-            if (this.isIdentity) {
+            if (this._isIdentity) {
                 Matrix.IdentityToRef(result);
                 return this;
             }
@@ -4585,52 +4585,28 @@ module BABYLON {
         public multiplyToArray(other: DeepImmutable<Matrix>, result: Float32Array, offset: number): Matrix {
             const m = this.m;
             const otherM = other.m;
-            if (this.isIdentity) {
+            if (this._isIdentity) {
                 for (var index = 0; index < 16; ++index) {
                     result[offset + index] = otherM[index];
                 }
                 return this;
             }
-            if (other.isIdentity) {
+            if ((other as Matrix)._isIdentity) {
                 for (var index = 0; index < 16; ++index) {
                     result[offset + index] = m[index];
                 }
                 return this;
             }
 
-            var tm0 = m[0];
-            var tm1 = m[1];
-            var tm2 = m[2];
-            var tm3 = m[3];
-            var tm4 = m[4];
-            var tm5 = m[5];
-            var tm6 = m[6];
-            var tm7 = m[7];
-            var tm8 = m[8];
-            var tm9 = m[9];
-            var tm10 = m[10];
-            var tm11 = m[11];
-            var tm12 = m[12];
-            var tm13 = m[13];
-            var tm14 = m[14];
-            var tm15 = m[15];
+            const tm0 = m[0], tm1 = m[1], tm2 = m[2], tm3 = m[3];
+            const tm4 = m[4], tm5 = m[5], tm6 = m[6], tm7 = m[7];
+            const tm8 = m[8], tm9 = m[9], tm10 = m[10], tm11 = m[11];
+            const tm12 = m[12], tm13 = m[13], tm14 = m[14], tm15 = m[15];
 
-            var om0 = otherM[0];
-            var om1 = otherM[1];
-            var om2 = otherM[2];
-            var om3 = otherM[3];
-            var om4 = otherM[4];
-            var om5 = otherM[5];
-            var om6 = otherM[6];
-            var om7 = otherM[7];
-            var om8 = otherM[8];
-            var om9 = otherM[9];
-            var om10 = otherM[10];
-            var om11 = otherM[11];
-            var om12 = otherM[12];
-            var om13 = otherM[13];
-            var om14 = otherM[14];
-            var om15 = otherM[15];
+            const om0 = otherM[0], om1 = otherM[1], om2 = otherM[2], om3 = otherM[3];
+            const om4 = otherM[4], om5 = otherM[5], om6 = otherM[6], om7 = otherM[7];
+            const om8 = otherM[8], om9 = otherM[9], om10 = otherM[10], om11 = otherM[11];
+            const om12 = otherM[12], om13 = otherM[13], om14 = otherM[14], om15 = otherM[15];
 
             result[offset] = tm0 * om0 + tm1 * om4 + tm2 * om8 + tm3 * om12;
             result[offset + 1] = tm0 * om1 + tm1 * om5 + tm2 * om9 + tm3 * om13;
@@ -4664,13 +4640,13 @@ module BABYLON {
                 return false;
             }
 
-            if (!this._isIdentityDirty && !(value as Matrix)._isIdentityDirty && this._isIdentity !== (value as Matrix)._isIdentity) {
-                return false;
-            }
+            // if (!this._isIdentityDirty && !(value as Matrix)._isIdentityDirty) {
+            //     return this._isIdentity === (value as Matrix)._isIdentity;
+            // }
 
             const m = this.m;
             const om = value && value.m;
-            return (
+            return (om &&
                 m[0]  === om[0]  && m[1]  === om[1]  && m[2]  === om[2]  && m[3]  === om[3] &&
                 m[4]  === om[4]  && m[5]  === om[5]  && m[6]  === om[6]  && m[7]  === om[7] &&
                 m[8]  === om[8]  && m[9]  === om[9]  && m[10] === om[10] && m[11] === om[11] &&
@@ -4717,7 +4693,7 @@ module BABYLON {
          * @returns true if operation was successful
          */
         public decompose(scale?: Vector3, rotation?: Quaternion, translation?: Vector3): boolean {
-            if (this.isIdentity) {
+            if (this._isIdentity) {
                 if (translation) {
                     translation.setAll(0);
                 }
@@ -4879,9 +4855,8 @@ module BABYLON {
          * @param ref matrix to store the result
          */
         public toNormalMatrix(ref: Matrix): void {
-            const tmp = MathTmp.Matrix[0];
-            this.invertToRef(tmp);
-            tmp.transposeToRef(ref);
+            this.invertToRef(ref);
+            ref.transpose();
             var m = ref.m;
             Matrix.FromValuesToRef(
                 m[0], m[1], m[2], 0,
@@ -4906,7 +4881,7 @@ module BABYLON {
          * @returns the current matrix
          */
         public getRotationMatrixToRef(result: Matrix): Matrix {
-            if (this.isIdentity) {
+            if (this._isIdentity) {
                 Matrix.IdentityToRef(result);
                 return this;
             }
